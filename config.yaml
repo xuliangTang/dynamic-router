@@ -1,0 +1,5 @@
+routes:
+    - name: index
+      method: GET
+      path: /
+      code: 200
