@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynamic-router
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: dynamic-router
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: dynamic-router
+    spec:
+      imagePullSecrets:
+        - name: dynamic-router
+      containers:
+        - name: kublog
+          image: registry.cn-hangzhou.aliyuncs.com/lain-txl/dynamic-router:main
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynamic-router-svc
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:  #service通过selector和pod建立关联
+    app: dynamic-router
