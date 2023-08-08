@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dynamic-route/lib"
+	"dynamic-router/lib"
 )
 
 func main() {
