@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: router.virtuallain.com
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/server-snippet: |
+      if ($request_uri ~* "^/user/\D+") {
+        return 404;
+      }
+      
+      set $needToken 0;
+      if ($request_uri ~* "^/user/\d+") {
+        set $needToken 1;
+      }
+      if ($args !~* "token=.+") {
+        set $needToken "${needToken}1";
+      }
+      if ($needToken = 11) {
+        return 401 "need token";
+      }
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: router.virtuallain.com
+      http:
+        paths:
+          - path: /
+            backend:
+              service:
+                name: dynamic-router-svc
+                port:
+                  number: 80
+            pathType: Prefix
