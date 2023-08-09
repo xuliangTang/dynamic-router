@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: router.virtuallain.com
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/server-snippet: |
+      set_by_lua_block $request_path {
+        return string.gsub(ngx.var.request_uri, "?.*", "")
+      }
+      
+      access_by_lua_block {
+        if ngx.var.request_path == "/reg" and ngx.req.get_method() == "POST" then
+          -- 判断post表单参数
+          ngx.req.read_body()
+          local args, err = ngx.req.get_post_args()
+          if not args then
+             ngx.say("failed to get post args: ", err)
+             return
+          end
+          if not args["username"] then
+            ngx.say("missing username")
+            return
+          end
+      
+          -- 请求验证api
+          res = ngx.location.capture(
+              '/check',
+              { method = ngx.HTTP_POST, args = { username = args["username"] } }
+          )
+          if res.status~=ngx.HTTP_OK then
+            ngx.say(res.status .. res.body)
+          end
+        end
+      
+        -- 模拟验证api
+        if ngx.var.request_path == "/check" and ngx.req.get_method() == "POST" then
+          local args, err = ngx.req.get_uri_args()
+          ngx.say("not allowed username...")
+          if args["username"] == "admin" then
+            ngx.status = 400
+            ngx.say("not allowed username")
+            return
+          end
+        end
+      }
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: router.virtuallain.com
+      http:
+        paths:
+          - path: /
+            backend:
+              service:
+                name: dynamic-router-svc
+                port:
+                  number: 80
+            pathType: Prefix

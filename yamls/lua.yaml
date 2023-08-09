@@ -1,0 +1,51 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: router.virtuallain.com
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/server-snippet: |      
+      access_by_lua_block {
+        ngx.header.content_type = 'text/json;charset=utf-8'
+        ngx.status = 200
+      
+        local args = ngx.req.get_uri_args()
+        if args["token"] == nil then
+          -- ngx.say("missing token")
+          -- ngx.exit(ngx.HTTP_FORBIDDEN)
+          return ngx.redirect("https://www.baidu.com")
+        end
+      
+        -- ngx.location.capture请求会报错不支持http2
+        -- 使用lua-resty-http模块请求api
+        if args["action"] == "http" then
+          local httpc, err = require("resty.http").new()
+          local ok, err, ssl_session = httpc:connect({
+              scheme = "http",
+              host = "router.virtuallain.com",
+              port = 80,
+          })
+          local res, err = httpc:request({
+            path = "/user/123?token=123",
+          })
+      
+          ngx.say(res:read_body())
+        end
+      
+      
+      
+      }
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: router.virtuallain.com
+      http:
+        paths:
+          - path: /
+            backend:
+              service:
+                name: dynamic-router-svc
+                port:
+                  number: 80
+            pathType: Prefix
